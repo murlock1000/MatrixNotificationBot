@@ -24,3 +24,6 @@ config.yaml
 
 # Log files
 *.log
+
+# SSL Certificates
+server.pem

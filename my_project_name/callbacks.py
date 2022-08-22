@@ -35,6 +35,15 @@ class Callbacks:
         self.config = config
         self.command_prefix = config.command_prefix
 
+    async def notification(self, msg):
+        """Send a notification to the room.
+
+        Args:
+            msg: The message to send.
+            room: The room to send the message to.
+        """
+        await send_text_to_room(self.client, self.config.notifications_room, msg)
+
     async def message(self, room: MatrixRoom, event: RoomMessageText) -> None:
         """Callback for when a message event is received
 

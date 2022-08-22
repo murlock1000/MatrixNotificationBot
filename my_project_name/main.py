@@ -19,6 +19,8 @@ from nio import (
 from my_project_name.callbacks import Callbacks
 from my_project_name.config import Config
 from my_project_name.storage import Storage
+from my_project_name.httpserver import HttpServerInstance
+
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +40,7 @@ async def main():
 
     # Configure the database
     store = Storage(config.database)
+
 
     # Configuration options for the AsyncClient
     client_config = AsyncClientConfig(
@@ -62,12 +65,18 @@ async def main():
 
     # Set up event callbacks
     callbacks = Callbacks(client, store, config)
-    client.add_event_callback(callbacks.message, (RoomMessageText,))
-    client.add_event_callback(
-        callbacks.invite_event_filtered_callback, (InviteMemberEvent,)
-    )
-    client.add_event_callback(callbacks.decryption_failure, (MegolmEvent,))
-    client.add_event_callback(callbacks.unknown, (UnknownEvent,))
+    # Start the HTTP server
+    httpServerInstance = HttpServerInstance(asyncio.get_event_loop(), config.port)
+    httpServerInstance.set_callback(callbacks.notification)
+    httpServerInstance.set_api_key(config.api_key)
+    httpServerInstance.run()
+
+    #client.add_event_callback(callbacks.message, (RoomMessageText,))
+    #client.add_event_callback(
+    #    callbacks.invite_event_filtered_callback, (InviteMemberEvent,)
+    #)
+    #client.add_event_callback(callbacks.decryption_failure, (MegolmEvent,))
+    #client.add_event_callback(callbacks.unknown, (UnknownEvent,))
 
     # Keep trying to reconnect on failure (with some time in-between)
     while True:
@@ -115,6 +124,7 @@ async def main():
         finally:
             # Make sure to close the client connection on disconnect
             await client.close()
+            httpServerInstance.stop()
 
 
 # Run the main function in an asyncio event loop

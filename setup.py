@@ -27,8 +27,8 @@ long_description = read_file(("README.md",))
 setup(
     name="my-project-name",
     version=version,
-    url="https://github.com/anoadragon453/nio-template",
-    description="A matrix bot to do amazing things!",
+    url="https://github.com/murlock1000/MatrixNotificationBot",
+    description="Uses POST to get a notification with an API key and forward it to a Matrix channel",
     packages=find_packages(exclude=["tests", "tests.*"]),
     install_requires=[
         "matrix-nio[e2e]>=0.10.0",
