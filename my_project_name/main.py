@@ -125,6 +125,7 @@ async def main():
             # Make sure to close the client connection on disconnect
             await client.close()
             httpServerInstance.stop()
+            logger.info('Closed client and http server')
 
 
 # Run the main function in an asyncio event loop

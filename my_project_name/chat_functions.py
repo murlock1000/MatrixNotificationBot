@@ -49,7 +49,7 @@ async def send_text_to_room(
 
     content = {
         "msgtype": msgtype,
-        "format": "org.matrix.custom.html",
+        #"format": "org.matrix.custom.html",
         "body": message,
     }
 

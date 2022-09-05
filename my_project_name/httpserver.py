@@ -111,7 +111,7 @@ class HttpServerInstance():
             self.thread = Thread(target= self.runHttpServer, args=(self.httpd,))
             self.thread.start()
         except KeyboardInterrupt: # On Exit we close the http server.
-            logger.warning("Received keyboard interrupt, stopping.")
+            logger.info("Received keyboard interrupt, stopping.")
             self.stop()
 
     def stop(self):
@@ -134,7 +134,7 @@ async def mainLoop():
         try:
             await asyncio.sleep(1)
         except KeyboardInterrupt: # On Exit we close the http server.
-            logger.warning("Received keyboard interrupt, stopping.")
+            logger.info("Exception: Received keyboard interrupt, stopping.")
             break
 
 if __name__ == '__main__':
