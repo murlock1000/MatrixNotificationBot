@@ -117,9 +117,13 @@ class HttpServerInstance():
     def stop(self):
         logger.info('Stopping httpd...')
         self.httpd.server_close()
+        self.httpd.shutdown()
         logger.info("HTTPD Server stopped.")
         self.thread.join() # does not stop??
-        logger.info("thread joined")
+        logger.info("HTTPD server polling thread joined")
+
+        #Stopping parent process
+        sys.exit(0)
     
     def set_callback(self, callback):
         global MESSAGE_CALLBACK

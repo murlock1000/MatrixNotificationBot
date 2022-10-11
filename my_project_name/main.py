@@ -114,16 +114,24 @@ async def main():
                 # Login succeeded!
 
             logger.info(f"Logged in as {config.user_id}")
+            logger.info("STOPPING HTTP SERVER")
+            httpServerInstance.stop()
+            logger.info('CLOSED Closed client and http server')
+
             await client.sync_forever(timeout=30000, full_state=True)
+            logger.info("Sync stopped")
 
         except (ClientConnectionError, ServerDisconnectedError):
             logger.warning("Unable to connect to homeserver, retrying in 15s...")
 
             # Sleep so we don't bombard the server with login requests
             sleep(15)
+        except (KeyboardInterrupt, SystemExit):
+            logger.info('Received SIGINT - Closing client and http server')
         finally:
             # Make sure to close the client connection on disconnect
             await client.close()
+            # Make sure to close the http server on disconnect
             httpServerInstance.stop()
             logger.info('Closed client and http server')
 
