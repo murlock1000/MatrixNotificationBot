@@ -114,9 +114,6 @@ async def main():
                 # Login succeeded!
 
             logger.info(f"Logged in as {config.user_id}")
-            logger.info("STOPPING HTTP SERVER")
-            httpServerInstance.stop()
-            logger.info('CLOSED Closed client and http server')
 
             await client.sync_forever(timeout=30000, full_state=True)
             logger.info("Sync stopped")
