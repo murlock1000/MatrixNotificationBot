@@ -8,7 +8,7 @@ command_prefix: "!c"
 # What room to send notifications to
 notifications_room : "!AKOFPASPDPOAKS:example.com"
 # HTTP server port (default 8080)
-port : "8080"
+port : 8080
 # API key for posting messages
 API_key : "Supersecretkey123"
 

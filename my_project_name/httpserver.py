@@ -25,9 +25,9 @@ import sys
 
 logger = logging.getLogger(__name__)
 
-async def sample_callback(msg):
+async def sample_callback(msg, sendTo):
     #await asyncio.sleep(3)
-    print(f"Relaying: {msg}")
+    print(f"Relaying: {msg} {sendTo}")
 
 MESSAGE_CALLBACK = sample_callback
 API_KEY = "apiKey"
@@ -43,7 +43,10 @@ class httpRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         content_length = int(self.headers['Content-Length']) # <--- Gets the size of data
         post_data = self.rfile.read(content_length) # <--- Gets the data itself
-        logger.debug(f"POST request, data: {post_data}")
+        
+        # Override the notification room id optionally
+        sendTo = self.headers.get('Send-To')
+        logger.debug(f"POST request, data: {post_data}, optional headers: {sendTo}")
        # print("POST request,\nPath: %s\nHeaders:\n%s\n\nBody:\n%s\n",
       #          str(self.path), str(self.headers), post_data.decode('utf-8'))
       #  print("###########################\n")
@@ -58,16 +61,16 @@ class httpRequestHandler(BaseHTTPRequestHandler):
             if contentType[0] == "multipart/form-data":
                 boundary = contentType[1].split('=') # parse multipart/form-data boundary string
                 msg = self.parsePostData(post_data.decode('utf-8'),boundary[1]) #parse post request data manually
-                self.initiate_callback(msg) # initiate callback
+                self.initiate_callback(msg, sendTo) # initiate callback
             elif contentType[0]=="text/plain":
                 msg = post_data.decode('utf-8')
-                self.initiate_callback(msg) # initiate callback
+                self.initiate_callback(msg, sendTo) # initiate callback
 
-    def initiate_callback(self, msg):
+    def initiate_callback(self, msg, sendTo:str):
         if msg!="":
             self.wfile.write("POST request for {} was Successfull!".format(self.path).encode('utf-8'))
-            logger.debug(f"Calling callback with message: {msg}")
-            EVENT_LOOP.create_task(MESSAGE_CALLBACK(msg)) # Send the message to all subscribed chat groups
+            logger.debug(f"Calling callback with message: {msg} sendTo: {sendTo}")
+            EVENT_LOOP.create_task(MESSAGE_CALLBACK(msg, sendTo)) # Send the message to all subscribed chat groups
         else:
             self.wfile.write("POST request data was empty or the text/plain data was wrong.".encode('utf-8'))
                 

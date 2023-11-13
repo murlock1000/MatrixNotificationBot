@@ -98,6 +98,21 @@ cp sample.config.yaml config.yaml
 
 Edit the config file. The `matrix` section must be modified at least.
 
+## Setup SSL authentication files
+
+Create locally signed certificate:
+openssl req -new -x509 -keyout localhost.pem -out localhost.pem -days 365 -nodes
+openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem
+
+
+## Execute API call to send a notification
+
+Send message to be put into the notification room
+curl -k -X POST -H "Content-Type: text/plain" -H "Api-Key-Here: Supersecretkey123" --data "Test message" https://127.0.0.1:8080
+
+(Optional) Change the room the message will be sent to.
+curl -k -X POST -H 'Send-To: !RoomIDHere:server.com' -H "Content-Type: text/plain" -H "Api-Key-Here: Supersecretkey123" --data "Test message to optional room" https://127.0.0.1:8080
+
 #### (Optional) Set up a Postgres database
 
 Create a postgres user and database for matrix-reminder-bot:
