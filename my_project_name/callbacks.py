@@ -46,7 +46,7 @@ class Callbacks:
             await send_text_to_room(self.client, self.config.notifications_room, msg)
         else:
             if sendTo.startswith("@"):
-                await send_msg(sendTo, msg, "text")
+                await send_msg(self.client, sendTo, msg, "text")
             else:
                 await send_text_to_room(self.client, sendTo, msg)
 

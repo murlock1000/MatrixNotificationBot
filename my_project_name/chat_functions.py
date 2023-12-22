@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 async def find_or_create_private_msg(
-        self, mxid: str, roomname: str
+        client: AsyncClient, mxid: str, roomname: str
     ) -> Union[RoomCreateResponse, RoomCreateError]:
         """
         :param mxid: user id to create a DM for
@@ -31,8 +31,8 @@ async def find_or_create_private_msg(
         """
         # Find if we already have a common room with user:
         msg_room = None
-        for croomid in self.client.rooms:
-            roomobj = self.client.rooms[croomid]
+        for croomid in client.rooms:
+            roomobj = client.rooms[croomid]
             if roomobj.member_count == 2:
                 for user in roomobj.users:
                     if user == mxid:
@@ -42,7 +42,7 @@ async def find_or_create_private_msg(
                         msg_room = roomobj
         # Nope, let's create one
         if msg_room is None:
-            msg_room = await self.client.room_create(
+            msg_room = await client.room_create(
                 visibility=RoomVisibility.private,
                 name=roomname,
                 is_direct=True,
@@ -51,24 +51,24 @@ async def find_or_create_private_msg(
             )
             if type(msg_room) == RoomCreateError:
                 logger.error(f"Failed to create a room, exiting")
-                await self.client.close()
+                #await self.client.close()
             else:
                 logger.debug(f"Created new room with id: {msg_room.room_id}")
         return msg_room
 
 
-async def _send_task(self, room_id: str, send_method: staticmethod, content: str, type):
+async def _send_task(client: AsyncClient, room_id: str, send_method: staticmethod, content: str, type):
         """
         : Wait for new sync, until we receive the new room information
         : Send the message to the room
         """
-        while self.client.rooms.get(room_id) is None:
-            await self.client.synced.wait()
-        while self.client.rooms[room_id].encrypted is False:
-            await self.client.synced.wait()
-        await send_method(room_id, content, type)
+        while client.rooms.get(room_id) is None:
+            await client.synced.wait()
+        while client.rooms[room_id].encrypted is False:
+            await client.synced.wait()
+        await send_method(client, room_id, content, type)
 
-async def send_msg(mxid: str, content: str, message_type:str, room_id: str = None, roomname: str = "Notification"):
+async def send_msg(client: AsyncClient, mxid: str, content: str, message_type:str, room_id: str = None, roomname: str = "Notification"):
         """
         :Code from - https://github.com/vranki/hemppa/blob/dcd69da85f10a60a8eb51670009e7d6829639a2a/bot.py
         :param mxid: A Matrix user id to send the message to
@@ -79,7 +79,7 @@ async def send_msg(mxid: str, content: str, message_type:str, room_id: str = Non
 
         # Sends private message to user. Returns true on success.
         if room_id is None:
-            msg_room = await find_or_create_private_msg(mxid, roomname)
+            msg_room = await find_or_create_private_msg(client, mxid, roomname)
             if not msg_room or (type(msg_room) is RoomCreateError):
                 logger.error(f"Unable to create room when trying to message {mxid}")
                 return None
@@ -92,7 +92,7 @@ async def send_msg(mxid: str, content: str, message_type:str, room_id: str = Non
         """
         #if message_type == 'text':
         asyncio.get_event_loop().create_task(
-            _send_task(room_id, send_text_to_room, content, "")
+            _send_task(client, room_id, send_text_to_room, content, "")
         )
         #elif message_type =='image':
        #         asyncio.get_event_loop().create_task(
