@@ -68,7 +68,7 @@ async def _send_task(self, room_id: str, send_method: staticmethod, content: str
             await self.client.synced.wait()
         await send_method(room_id, content, type)
 
-async def send_msg(mxid: str, content: str, message_type:str, room_id: str = None, roomname: str = ""):
+async def send_msg(mxid: str, content: str, message_type:str, room_id: str = None, roomname: str = "Notification"):
         """
         :Code from - https://github.com/vranki/hemppa/blob/dcd69da85f10a60a8eb51670009e7d6829639a2a/bot.py
         :param mxid: A Matrix user id to send the message to
