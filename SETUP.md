@@ -101,8 +101,9 @@ Edit the config file. The `matrix` section must be modified at least.
 ## Setup SSL authentication files
 
 Create locally signed certificate:
-openssl req -new -x509 -keyout localhost.pem -out localhost.pem -days 365 -nodes
-openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem
+openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout server.key -out server.crt
+
+cat server.crt server.key > server.pem
 
 
 ## Execute API call to send a notification
