@@ -149,14 +149,39 @@ async def send_text_to_room(
         content["m.relates_to"] = {"m.in_reply_to": {"event_id": reply_to_event_id}}
 
     try:
-        return await client.room_send(
-            room_id,
-            "m.room.message",
-            content,
-            ignore_unverified_devices=True,
-        )
+        return await with_ratelimit(client.room_send)(
+                    room_id,
+                    "m.room.message",
+                    content,
+                    ignore_unverified_devices=True
+                    )
     except (SendRetryError, LocalProtocolError):
         logger.exception(f"Unable to send message response to {room_id}")
+
+async def sleep_ms(delay_ms):
+    deadzone = 50  # 50ms additional wait time.
+    delay_s = (delay_ms + deadzone) / 1000
+
+    await asyncio.sleep(delay_s)
+
+def with_ratelimit(func):
+    """
+    Decorator for calling client methods with backoff, specified in server response if rate limited.
+    """
+    async def wrapper(*args, **kwargs):
+        while True:
+            logger.debug(f"waiting for response")
+            response = await func(*args, **kwargs)
+            logger.debug(f"Response: {response}")
+            if isinstance(response, ErrorResponse):
+                if response.status_code == "M_LIMIT_EXCEEDED":
+                    await sleep_ms(response.retry_after_ms)
+                else:
+                    return response
+            else:
+                return response
+
+    return wrapper
 
 
 def make_pill(user_id: str, displayname: str = None) -> str:
