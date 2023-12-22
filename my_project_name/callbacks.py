@@ -12,7 +12,7 @@ from nio import (
 )
 
 from my_project_name.bot_commands import Command
-from my_project_name.chat_functions import make_pill, react_to_event, send_text_to_room
+from my_project_name.chat_functions import make_pill, react_to_event, send_msg, send_text_to_room
 from my_project_name.config import Config
 from my_project_name.message_responses import Message
 from my_project_name.storage import Storage
@@ -45,7 +45,10 @@ class Callbacks:
         if sendTo is None:
             await send_text_to_room(self.client, self.config.notifications_room, msg)
         else:
-            await send_text_to_room(self.client, sendTo, msg)
+            if sendTo.startswith("@"):
+                await send_msg(sendTo, msg, "text")
+            else:
+                await send_text_to_room(self.client, sendTo, msg)
 
     async def message(self, room: MatrixRoom, event: RoomMessageText) -> None:
         """Callback for when a message event is received
