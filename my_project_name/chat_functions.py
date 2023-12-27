@@ -66,6 +66,8 @@ async def _send_task(client: AsyncClient, room_id: str, send_method: staticmetho
             await client.synced.wait()
         while client.rooms[room_id].encrypted is False:
             await client.synced.wait()
+        while client.rooms[room_id].members_synced is False:
+            await client.synced.wait()
         await send_method(client, room_id, content, type)
 
 async def send_msg(client: AsyncClient, mxid: str, content: str, message_type:str, room_id: str = None, roomname: str = "Notification"):
