@@ -72,9 +72,9 @@ async def main():
     httpServerInstance.run()
 
     #client.add_event_callback(callbacks.message, (RoomMessageText,))
-    #client.add_event_callback(
-    #    callbacks.invite_event_filtered_callback, (InviteMemberEvent,)
-    #)
+    client.add_event_callback(
+        callbacks.invite_event_filtered_callback, (InviteMemberEvent,)
+    )
     #client.add_event_callback(callbacks.decryption_failure, (MegolmEvent,))
     #client.add_event_callback(callbacks.unknown, (UnknownEvent,))
 
