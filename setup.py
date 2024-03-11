@@ -20,12 +20,12 @@ def read_file(path_segments):
         return f.read()
 
 
-version = exec_file(("my_project_name", "__init__.py"))["__version__"]
+version = exec_file(("bot_messenger", "__init__.py"))["__version__"]
 long_description = read_file(("README.md",))
 
 
 setup(
-    name="my-project-name",
+    name="bot-messenger",
     version=version,
     url="https://github.com/murlock1000/MatrixNotificationBot",
     description="Uses POST to get a notification with an API key and forward it to a Matrix channel",
@@ -34,6 +34,9 @@ setup(
         "matrix-nio[e2e]>=0.10.0",
         "Markdown>=3.1.1",
         "PyYAML>=5.1.2",
+        "python-magic",
+        "commonmark",
+        "pillow"
     ],
     extras_require={
         "postgres": ["psycopg2>=2.8.5"],
@@ -54,6 +57,6 @@ setup(
     ],
     long_description=long_description,
     long_description_content_type="text/markdown",
-    # Allow the user to run the bot with `my-project-name ...`
-    scripts=["my-project-name"],
+    # Allow the user to run the bot with `bot-messenger ...`
+    scripts=["bot-messenger"],
 )

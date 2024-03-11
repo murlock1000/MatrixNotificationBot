@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+import asyncio
+from threading import Thread
+import logging
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import ssl
+import sys
+
+from bot_messenger.messages import BaseMessage, MediaMessage, TextMessage
+
 """
 A HTTP server for listening to POST requests and relaying the messages to a Matrix bot.
 Usage::
@@ -14,66 +23,62 @@ curl -k -X POST -H "Content-Type: text/plain" --data "${NotificationMessage}" ht
 create ssl certificate:
 openssl req -new -x509 -keyout server.pem -out server.pem -days 365 -nodes
 """
-import asyncio
-from re import T
-import time
-from threading import Thread
-import logging
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import ssl
-import sys
 
 logger = logging.getLogger(__name__)
 
-async def sample_callback(msg, sendTo):
+async def sample_callback(msg):
     #await asyncio.sleep(3)
-    print(f"Relaying: {msg} {sendTo}")
+    print(f"Relaying: {msg}")
 
 MESSAGE_CALLBACK = sample_callback
 API_KEY = "apiKey"
 EVENT_LOOP = None
 
 class httpRequestHandler(BaseHTTPRequestHandler):
-    def _set_response(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-
     # Define Post request response
     def do_POST(self):
         content_length = int(self.headers['Content-Length']) # <--- Gets the size of data
         post_data = self.rfile.read(content_length) # <--- Gets the data itself
+        contentType = str(self.headers.get("Content-Type")).split(';') # <--- get type of post request body
+        api_key = str(self.headers.get("Api-Key-Here")).split(';')[0]  # <--- get api key
+        sendTo = self.headers.get('Send-To')# <--- get room/user to send message to
         
-        # Override the notification room id optionally
-        sendTo = self.headers.get('Send-To')
         logger.debug(f"POST request, data: {post_data}, optional headers: {sendTo}")
        # print("POST request,\nPath: %s\nHeaders:\n%s\n\nBody:\n%s\n",
       #          str(self.path), str(self.headers), post_data.decode('utf-8'))
       #  print("###########################\n")
 
-        contentType = str(self.headers.get("Content-Type")).split(';') # <--- get type of post request body
-        api_key = str(self.headers.get("Api-Key-Here")).split(';')[0]  # <--- get api key
-
-        post_data.decode('utf-8') # convert post body data into string
-        self._set_response() #initiate response
-        # We will parse POST requests with body formats of multipart/form-data with name="Message" or text/plain sending everything.
+        #post_data.decode('utf-8') # convert post body data into string
+        
+        # We will parse POST requests with body formats of multipart/form-data with name="Message" ; text/plain sends text ; other types are sent as media.
         if api_key == API_KEY:
+            message = None
             if contentType[0] == "multipart/form-data":
                 boundary = contentType[1].split('=') # parse multipart/form-data boundary string
-                msg = self.parsePostData(post_data.decode('utf-8'),boundary[1]) #parse post request data manually
-                self.initiate_callback(msg, sendTo) # initiate callback
+                data = self.parsePostData(post_data.decode('utf-8'),boundary[1]).encode('utf-8') #parse post request data manually
+                message = TextMessage(sendTo, data, content_length)
             elif contentType[0]=="text/plain":
-                msg = post_data.decode('utf-8')
-                self.initiate_callback(msg, sendTo) # initiate callback
+                #msg = post_data.decode('utf-8')
+                message = TextMessage(sendTo, post_data, content_length)
+            else:
+                file_name = self.headers.get("File-Name")
+                message = MediaMessage(sendTo, post_data, content_length, contentType, file_name)
 
-    def initiate_callback(self, msg, sendTo:str):
-        if msg!="":
-            self.wfile.write("POST request for {} was Successfull!".format(self.path).encode('utf-8'))
-            logger.debug(f"Calling callback with message: {msg} sendTo: {sendTo}")
-            EVENT_LOOP.create_task(MESSAGE_CALLBACK(msg, sendTo)) # Send the message to all subscribed chat groups
+            self.initiate_callback(message) # initiate callback
+
+    def initiate_callback(self, message: BaseMessage):
+        if message is None:
+            self._set_response(400)
+            self.wfile.write("POST request data was empty or contentType was wrong.".encode('utf-8'))
+        elif message.is_valid:
+            self._set_response(200)
+            self.wfile.write(f"POST request for {self.path} was Successfull!".encode('utf-8'))
+            logger.debug(f"Calling callback with message: {message}")
+            EVENT_LOOP.create_task(MESSAGE_CALLBACK(message)) # Send the message to all subscribed chat groups
         else:
-            self.wfile.write("POST request data was empty or the text/plain data was wrong.".encode('utf-8'))
-                
+            self._set_response(400)
+            self.wfile.write(f"POST request for {self.path} FAILED with error: {message}".encode('utf-8'))
+            
     def parsePostData(self, data, boundary):
         data = str(data).split("--"+boundary+'\r\n')[1:] # Separate body data into fields with string manipulation.
         for i in range(len(data)):
@@ -89,6 +94,11 @@ class httpRequestHandler(BaseHTTPRequestHandler):
             if name=="Message":
                 return body[:-2]
         return ""
+    
+    def _set_response(self, code):
+        self.send_response(code)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
 
 class HttpServerInstance():
     def __init__(self, loop, port=8080):

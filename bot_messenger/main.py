@@ -9,17 +9,16 @@ from nio import (
     AsyncClient,
     AsyncClientConfig,
     InviteMemberEvent,
+    InviteMemberEvent,
     LocalProtocolError,
     LoginError,
-    MegolmEvent,
-    RoomMessageText,
-    UnknownEvent,
+    RoomEncryptionEvent,
 )
 
-from my_project_name.callbacks import Callbacks
-from my_project_name.config import Config
-from my_project_name.storage import Storage
-from my_project_name.httpserver import HttpServerInstance
+from bot_messenger.callbacks import Callbacks
+from bot_messenger.config import Config
+from bot_messenger.storage import Storage
+from bot_messenger.httpserver import HttpServerInstance
 
 
 logger = logging.getLogger(__name__)
@@ -72,11 +71,8 @@ async def main():
     httpServerInstance.run()
 
     #client.add_event_callback(callbacks.message, (RoomMessageText,))
-    client.add_event_callback(
-        callbacks.invite_event_filtered_callback, (InviteMemberEvent,)
-    )
-    #client.add_event_callback(callbacks.decryption_failure, (MegolmEvent,))
-    #client.add_event_callback(callbacks.unknown, (UnknownEvent,))
+    client.add_event_callback(callbacks.invite_event_filtered_callback, (InviteMemberEvent,))
+    client.add_event_callback(callbacks.room_encryption, (RoomEncryptionEvent,))
 
     # Keep trying to reconnect on failure (with some time in-between)
     while True:

@@ -27,3 +27,8 @@ config.yaml
 
 # SSL Certificates
 server.pem
+test.txt
+SupportBot.png
+.vscode/launch.json
+test.py
+load.sh
