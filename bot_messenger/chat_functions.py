@@ -158,7 +158,12 @@ async def send_text_to_room(
         "body": message,
     }
 
-    if markdown_convert:
+    if message.startswith("<html>"):
+        content["format"] = "org.matrix.custom.html"
+        message = message.replace('\n', '')
+        content["formatted_body"] = message
+        content["body"] = message
+    elif markdown_convert:
         content["formatted_body"] = markdown(message)
 
     if reply_to_event_id:
@@ -173,83 +178,6 @@ async def send_text_to_room(
                     )
     except (SendRetryError, LocalProtocolError):
         logger.exception(f"Unable to send message response to {room_id}")
-
-async def send_file_to_room(
-    client: AsyncClient,
-    room_id: str,
-    data: bytes,
-    file_size: int,
-    type: str,
-    file_name: str,
-) -> Union[RoomSendResponse, ErrorResponse]:
-    """Process file.
-    Upload file to server and then send link to rooms.
-    Works and tested for .pdf, .txt, .ogg, .wav.
-    All these file types are treated the same.
-    Arguments:
-    ---------
-    rooms : list
-        list of room_id-s
-    file : str
-        file name of file from --file argument
-    """
-
-    mime_type = magic.from_buffer(data, mime=True)
-
-    # first do an upload of file if it hasn't already been uploaded
-    # see https://matrix-nio.readthedocs.io/en/latest/nio.html#nio.AsyncClient.upload # noqa
-    # then send URI of upload to room
-    resp, maybe_keys = await client.upload(
-        io.BytesIO(data),
-        content_type=mime_type,  # application/pdf
-        encrypt=True,
-        filename=file_name,
-        filesize=file_size,
-    )
-    if isinstance(resp, UploadResponse):
-        logger.debug(
-            f"File {file_name} of type {mime_type} and size {file_size} was uploaded successfully to server. "
-            f"Response is: {resp.content_uri}"
-        )
-        content_uri = resp.content_uri
-    else:
-        logger.info(
-            "Failed to upload file to server. "
-            "Please retry. This could be temporary issue on "
-            "your server. "
-            "Sorry."
-        )
-        logger.info(
-            f'file="{file_name}"; mime_type="{mime_type}"; '
-            f'filessize="{file_size}"'
-            f"Failed to upload: {resp}"
-        )
-        return
-    print("Finished file upload")
-
-    content = {
-        "body": file_name,  # descriptive title
-        "info": {
-            "size": file_size,
-            "mimetype": mime_type,
-        },
-        "msgtype": type,
-        "url": content_uri,
-    }
-    
-    try:
-        return await with_ratelimit(client.room_send)(
-                    room_id,
-                    "m.room.message",
-                    content,
-                    ignore_unverified_devices=True
-                    )
-    except Exception:
-        logger.debug(
-            f"File send of file {file_name} failed. " "Sorry. Here is the traceback."
-        )
-        logger.debug(traceback.format_exc())
-    return content_uri
 
 async def sleep_ms(delay_ms):
     deadzone = 50  # 50ms additional wait time.
@@ -585,8 +513,11 @@ async def send_image(client,
     }
 
     try:
-        resp = await client.room_send(
-            room_id, message_type="m.room.message", content=content
+        resp = await with_ratelimit(client.room_send)(
+            room_id,
+            message_type="m.room.message",
+            content=content,
+            ignore_unverified_devices=True
         )
         if isinstance(resp, RoomSendError):
             logger.error(
