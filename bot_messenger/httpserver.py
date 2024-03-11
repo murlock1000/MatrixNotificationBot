@@ -61,7 +61,7 @@ class httpRequestHandler(BaseHTTPRequestHandler):
                 boundary = contentType[1].split('=') # parse multipart/form-data boundary string
                 data = self.parsePostData(post_data.decode('utf-8'),boundary[1]).encode('utf-8') #parse post request data manually
                 message = TextMessage(sendTo, data, content_length)
-            elif contentType[0]=="text/plain":
+            elif contentType[0].startswith("text/"):
                 #msg = post_data.decode('utf-8')
                 message = TextMessage(sendTo, post_data, content_length)
             else:
