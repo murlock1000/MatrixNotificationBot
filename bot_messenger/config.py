@@ -104,6 +104,10 @@ class Config:
         self.homeserver_url = self._get_cfg(["matrix", "homeserver_url"], required=True)
 
         self.command_prefix = self._get_cfg(["command_prefix"], default="!c") + " "
+        self.send_to_notifications_room_by_default = self._get_cfg(
+            ["send_to_notifications_room_by_default"], default=True
+        )
+
         self.notifications_room = self._get_cfg(["notifications_room"], required=True)
         self.port = self._get_cfg(["port"], default="8080")
         self.api_key = self._get_cfg(["API_key"], required=True)

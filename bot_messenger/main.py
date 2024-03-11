@@ -68,6 +68,8 @@ async def main():
     httpServerInstance = HttpServerInstance(asyncio.get_event_loop(), config.port)
     httpServerInstance.set_callback(callbacks.notification)
     httpServerInstance.set_api_key(config.api_key)
+    if config.send_to_notifications_room_by_default:
+        httpServerInstance.set_notifications_room_id(config.notifications_room)
     httpServerInstance.run()
 
     #client.add_event_callback(callbacks.message, (RoomMessageText,))

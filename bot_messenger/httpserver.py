@@ -31,6 +31,7 @@ async def sample_callback(msg):
     print(f"Relaying: {msg}")
 
 MESSAGE_CALLBACK = sample_callback
+NOTIFICATIONS_ROOM_ID = None
 API_KEY = "apiKey"
 EVENT_LOOP = None
 
@@ -43,6 +44,9 @@ class httpRequestHandler(BaseHTTPRequestHandler):
         api_key = str(self.headers.get("Api-Key-Here")).split(';')[0]  # <--- get api key
         sendTo = self.headers.get('Send-To')# <--- get room/user to send message to
         
+        if sendTo is None and NOTIFICATIONS_ROOM_ID is not None:
+            sendTo = NOTIFICATIONS_ROOM_ID
+            
         logger.debug(f"POST request, data: {post_data}, optional headers: {sendTo}")
        # print("POST request,\nPath: %s\nHeaders:\n%s\n\nBody:\n%s\n",
       #          str(self.path), str(self.headers), post_data.decode('utf-8'))
@@ -145,6 +149,10 @@ class HttpServerInstance():
     def set_api_key(self, key):
         global API_KEY
         API_KEY = key
+        
+    def set_notifications_room_id(self, room_id:str):
+        global NOTIFICATIONS_ROOM_ID
+        NOTIFICATIONS_ROOM_ID = room_id
     
 async def mainLoop():
     while(True):
