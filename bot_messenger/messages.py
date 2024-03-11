@@ -33,6 +33,10 @@ class BaseMessage():
         self.validate_message_to()
         
     def validate_message_to(self):
+        if self.message_to is None:
+            self.invalidate_message(f"Recipient not provided, must be one of @user:server.com or !roomid:server.com in '-H \"Send-To: @user:server.com\"'" % self.message_to)
+            return
+        
         if re.match("@.*:.*", self.message_to):
             self.recipient_user_id = self.message_to
         elif re.match("!.*:.*", self.message_to):
