@@ -1,4 +1,6 @@
 
+from collections import defaultdict
+from enum import Enum
 import io
 import logging
 import asyncio
@@ -6,7 +8,7 @@ import os
 import re
 import traceback
 import magic
-from typing import Optional, Union
+from typing import Dict, Iterator, Optional, Union
 from PIL import Image
 
 from markdown import markdown
@@ -24,13 +26,16 @@ from nio import (
     UploadResponse,
     RoomAvatarEvent,
     RoomSendError,
+    ToDeviceMessage,
 )
+
+from nio.crypto import OlmDevice, InboundGroupSession, Session
 
 from bot_messenger.messages import BaseMessage, MediaMessage, MessageType, TextMessage
 
 logger = logging.getLogger(__name__)
-
-
+        
+        
 def is_user_in_room(room: MatrixRoom, mxid: str) -> bool:
     for user in room.users:
         if user == mxid:
@@ -541,3 +546,81 @@ async def send_image(client,
     except Exception:
         logger.error("E149: " f"Image send of file {file_name} failed. Sorry.")
         logger.debug("Here is the traceback.\n" + traceback.format_exc())
+        
+        
+## MSC3061: Sharing room keys for past messages - matrix-nio does not yet support sharing room keys, so this has been
+## Implemented from scratch until proper library support comes out.
+async def send_shared_history_keys(client:AsyncClient, room_id: str, user_ids:[str]):
+
+    if not client.olm:
+        raise LocalProtocolError("End-to-end encryption disabled")
+
+    # Get room
+    room = client.rooms.get(room_id)
+    if not room:
+        return Exception(f"Room {room_id} not found")
+    if not room.encrypted:
+        return Exception(f"Room {room_id} not encrypted")
+
+    # TODO: find way to fetch user devices from server.
+    # Get user devices
+    devices_by_user = {}
+    for user_id in user_ids:
+        devices_by_user[user_id] = client.device_store.active_user_devices(user_id)
+    await send_shared_history_inbound_sessions(client, room, devices_by_user)
+
+async def send_shared_history_inbound_sessions(client:AsyncClient, room:MatrixRoom, devices_by_user_iter: Dict[str, Iterator[OlmDevice]]):
+    # Get stored InboundGroupSessions - currently storage does not differentiate between shareable and private, so we send all!!!.
+    shared_history_sessions:defaultdict[str, defaultdict[str, InboundGroupSession]] = client.olm.inbound_group_store._entries[room.room_id]
+
+    # Convert Iterator to list
+    devices_by_user = {}
+    for user, device_iter in devices_by_user_iter.items():
+        devices_by_user[user] = list(device_iter)
+
+    logger.debug(
+        f"Sharing history of room {room.room_id} with users {devices_by_user.keys()}, {shared_history_sessions}")
+
+    for sender_key, group_sessions in shared_history_sessions.items():
+        for group_session in group_sessions.values():
+
+            for user_id, devices in devices_by_user.items():
+                for device in devices:
+                    session = client.olm.session_store.get(device.curve25519)
+                    if session is None:
+                        logger.error(f"Session for user {user_id} device {device} is not available yet.")
+                        continue
+                    client.outgoing_to_device_messages.append(
+                        _encrypt_forwarding_key(client, room.room_id, group_session, session, device)
+                    )
+
+                resp = await client.send_to_device_messages()
+
+def _encrypt_forwarding_key(
+        client: AsyncClient,
+        room_id,  # type: str
+        group_session,  # type: InboundGroupSession
+        session,  # type: Session
+        device,  # type: OlmDevice
+):
+    # type: (...) -> ToDeviceMessage
+    """Encrypt a group session to be forwarded as a to-device message."""
+    key_content = {
+        "algorithm": client.olm._megolm_algorithm,
+        "forwarding_curve25519_key_chain": group_session.forwarding_chain,
+        "room_id": room_id,
+        "sender_claimed_ed25519_key": group_session.ed25519,
+        "sender_key": group_session.sender_key,
+        "session_id": group_session.id,
+        "session_key": group_session.export_session(
+            group_session.first_known_index
+        ),
+        "chain_index": group_session.first_known_index,
+        "org.matrix.msc3061.shared_history": True,
+    }
+    olm_dict = client.olm._olm_encrypt(
+        session, device, "m.forwarded_room_key", key_content
+    )
+    return ToDeviceMessage(
+        "m.room.encrypted", device.user_id, device.device_id, olm_dict
+    )

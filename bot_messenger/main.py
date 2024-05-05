@@ -13,6 +13,7 @@ from nio import (
     LocalProtocolError,
     LoginError,
     RoomEncryptionEvent,
+    RoomMemberEvent,
 )
 
 from bot_messenger.callbacks import Callbacks
@@ -73,6 +74,7 @@ async def main():
     httpServerInstance.run()
 
     #client.add_event_callback(callbacks.message, (RoomMessageText,))
+    client.add_event_callback(callbacks.member, (RoomMemberEvent,))
     client.add_event_callback(callbacks.invite_event_filtered_callback, (InviteMemberEvent,))
     client.add_event_callback(callbacks.room_encryption, (RoomEncryptionEvent,))
 
@@ -116,13 +118,15 @@ async def main():
             await client.sync_forever(timeout=30000, full_state=True)
             logger.info("Sync stopped")
 
-        except (ClientConnectionError, ServerDisconnectedError):
+        except (ClientConnectionError, ServerDisconnectedError) as e:
             logger.warning("Unable to connect to homeserver, retrying in 15s...")
 
             # Sleep so we don't bombard the server with login requests
             sleep(15)
         except (KeyboardInterrupt, SystemExit):
             logger.info('Received SIGINT - Closing client and http server')
+        except Exception as e:
+            logger.error(f"Exception occurred: {e}, exiting")
         finally:
             # Make sure to close the client connection on disconnect
             await client.close()
