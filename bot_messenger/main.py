@@ -66,7 +66,7 @@ async def main():
     # Set up event callbacks
     callbacks = Callbacks(client, store, config)
     # Start the HTTP server
-    httpServerInstance = HttpServerInstance(asyncio.get_event_loop(), config.port)
+    httpServerInstance = HttpServerInstance(asyncio.get_event_loop(), config.port, config.certFilePath)
     httpServerInstance.set_callback(callbacks.notification)
     httpServerInstance.set_api_key(config.api_key)
     if config.send_to_notifications_room_by_default:

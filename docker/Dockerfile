@@ -22,7 +22,7 @@
 # We use an initial docker container to build all of the runtime dependencies,
 # then transfer those dependencies to the container we're going to ship,
 # before throwing this one away
-ARG PYTHON_VERSION=3.10
+ARG PYTHON_VERSION=3.8
 FROM docker.io/python:${PYTHON_VERSION}-alpine as builder
 
 ##
@@ -30,7 +30,7 @@ FROM docker.io/python:${PYTHON_VERSION}-alpine as builder
 ##
 
 # Install libolm build dependencies
-ARG LIBOLM_VERSION=3.2.10
+ARG LIBOLM_VERSION=3.2.16
 RUN apk add --no-cache \
     make \
     cmake \
@@ -49,29 +49,35 @@ RUN apk add --no-cache \
 COPY docker/build_and_install_libolm.sh /scripts/
 RUN /scripts/build_and_install_libolm.sh ${LIBOLM_VERSION} /python-libs
 
-# Install Postgres dependencies
+# Install native runtime dependencies
 RUN apk add --no-cache \
     musl-dev \
-    libpq \
     postgresql-dev
 
 # Install python runtime modules. We do this before copying the source code
 # such that these dependencies can be cached
 # This speeds up subsequent image builds when the source code is changed
-RUN mkdir -p /src/bot_messenger
-COPY bot_messenger/__init__.py /src/bot_messenger/
-COPY README.md bot-messenger /src/
+RUN mkdir -p /app/bot_messenger
+COPY bot_messenger/__init__.py /app/bot_messenger/
+COPY README.md main.py /app/
 
 # Build the dependencies
-COPY setup.py /src/setup.py
-RUN pip install --prefix="/python-libs" --no-warn-script-location "/src/.[postgres]"
+RUN pip install --upgrade pip
+# Pin poetry version so updates don't break the build
+RUN pip install poetry==1.8.2
 
-# Now copy the source code
-COPY *.py *.md /src/
-COPY bot_messenger/*.py /src/bot_messenger/
+# Disable poetry venv creation in builder.
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_CREATE=0
 
-# And build the final module
-RUN pip install --prefix="/python-libs" --no-warn-script-location "/src/.[postgres]"
+WORKDIR /app
+COPY pyproject.toml poetry.lock /app/
+
+# Export poetry.lock to requirements file omitting hashes for faster dependency resolution
+# And building libraries in external folder /python-libs
+RUN poetry export --without-hashes --without dev --format=requirements.txt > requirements.txt
+# Install production dependencies
+RUN pip install --prefix="/python-libs" --ignore-installed --no-warn-script-location -r requirements.txt
 
 ##
 ## Creating the runtime container
@@ -90,12 +96,15 @@ COPY --from=builder /usr/local/lib/libolm* /usr/local/lib/
 # Install any native runtime dependencies
 RUN apk add --no-cache \
     libstdc++ \
-    libpq \
-    postgresql-dev
+    libpq
+
+# Now copy the source code
+COPY *.py *.md /app/
+COPY bot_messenger/ /app/bot_messenger/
 
 # Specify a volume that holds the config file, SQLite3 database,
 # and the matrix-nio store
 VOLUME ["/data"]
 
 # Start the bot
-ENTRYPOINT ["bot-messenger", "/data/config.yaml"]
+ENTRYPOINT ["python", "/app/main.py", "/data/config.yaml"]

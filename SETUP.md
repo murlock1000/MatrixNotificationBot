@@ -1,8 +1,6 @@
 # Setup
 
-nio-template is a sample repository of a working Matrix bot that can be taken
-and transformed into one's own bot, service or whatever else may be necessary.
-Below is a quick setup guide to running the existing bot.
+Below is a quick setup guide to running the messenger-bot.
 
 ## Install the dependencies
 
@@ -23,10 +21,20 @@ installation and ensuring the `docker-compose` command works, you need to:
    docker volume create \
      --opt type=none \
      --opt o=bind \
-     --opt device="/path/to/data/dir" data_volume
+     --opt device="/path/to/data/dir" messenger_bot_data_volume
    ```
 
 Run `docker/start-dev.sh` to start the bot.
+
+Additionally, you can directly link the data using the following:
+
+```bash
+cp sample.config.yaml config.yaml
+# Edit config.yaml, see the file for details
+mkdir data
+docker run -v ${PWD}/config.docker.yaml:/config/config.yaml:ro \
+    -v ${PWD}/data:/data -p 50051:50051 --name messenger_bot murlock1000/messenger_bot
+```
 
 **Note:** If you are trying to connect to a Synapse instance running on the
 host, you need to allow the IP address of the docker container to connect. This
@@ -43,50 +51,47 @@ instruct you on how to install the dependencies natively:
 
 You can install [libolm](https://gitlab.matrix.org/matrix-org/olm) from source,
 or alternatively, check your system's package manager. Version `3.0.0` or
-greater is required.
+greater is required and can be installed using:
 
-**(Optional) postgres development headers**
+```
+sudo apt install libolm-dev
+```
 
-By default, the bot uses SQLite as its storage backend. This is fine for a few
-hundred users, but if you plan to support a much higher volume of requests, you
-may consider using Postgres as a database backend instead.
+#### Python dev dependencies
 
-If you want to use postgres as a database backend, you'll need to install
-postgres development headers:
+```
+sudo apt install python3-dev build-essential
+```
+
+**Postgres development headers**
+
+By default, the bot uses Postgres as its storage backend. you'll need to install postgres development headers:
 
 Debian/Ubuntu:
-
 ```
 sudo apt install libpq-dev libpq5
 ```
 
 Arch:
-
 ```
 sudo pacman -S postgresql-libs
 ```
 
 #### Install Python dependencies
 
-Create and activate a Python 3 virtual environment:
+We will be using [Poetry](https://python-poetry.org/) to manage our project dependencies.
 
-```
-virtualenv -p python3 env
-source env/bin/activate
-```
-
-Install python dependencies:
-
-```
-pip install -e .
-```
-
-(Optional) If you want to use postgres as a database backend, use the following
-command to install postgres dependencies alongside those that are necessary:
-
-```
-pip install -e ".[postgres]"
-```
+- Create a Python 3 virtual environment:
+    ```
+    pip install virtualenv
+    virtualenv -p python3 env
+    source ./env/bin/activate
+    ```
+- Install poetry and dependencies:
+   ```
+   pip install poetry
+   poetry install
+   ```
 
 ## Configuration
 
@@ -98,29 +103,20 @@ cp sample.config.yaml config.yaml
 
 Edit the config file. The `matrix` section must be modified at least.
 
-## Setup SSL authentication files
+## Setup SSL authentication files for API endpoint
 
 Create locally signed certificate:
-openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout server.key -out server.crt
+openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout ./data/server.key -out ./data/server.crt
 
-cat server.crt server.key > server.pem
-
-
-## Execute API call to send a notification
-
-Send message to be put into the notification room
-curl -k -X POST -H "Content-Type: text/plain" -H "Api-Key-Here: Supersecretkey123" --data "Test message" https://127.0.0.1:8080
-
-(Optional) Change the room the message will be sent to.
-curl -k -X POST -H 'Send-To: !RoomIDHere:server.com' -H "Content-Type: text/plain" -H "Api-Key-Here: Supersecretkey123" --data "Test message to optional room" https://127.0.0.1:8080
+cat server.crt server.key > ./data/server.pem
 
 #### (Optional) Set up a Postgres database
 
-Create a postgres user and database for matrix-reminder-bot:
+Create a postgres user and database for messenger-bot:
 
 ```
-sudo -u postgresql psql createuser nio-template -W  # prompts for a password
-sudo -u postgresql psql createdb -O nio-template nio-template
+sudo -u postgresql psql createuser messenger-bot -W  # prompts for a password
+sudo -u postgresql psql createdb -O messenger-bot messenger-bot
 ```
 
 Edit the `storage.database` config option, replacing the `sqlite://...` string with `postgres://...`. The syntax is:
@@ -148,34 +144,55 @@ source env/bin/activate
 Then simply run the bot with:
 
 ```
-bot-messenger
+poetry run python3 main.py
 ```
-
-You'll notice that "bot-messenger" is scattered throughout the codebase. When
-it comes time to modifying the code for your own purposes, you are expected to
-replace every instance of "bot-messenger" and its variances with your own
-project's name.
 
 By default, the bot will run with the config file at `./config.yaml`. However, an
 alternative relative or absolute filepath can be specified after the command:
 
 ```
-bot-messenger other-config.yaml
+poetry run python3 main.py other-config.yaml
 ```
 
 ## Testing the bot works
 
-Invite the bot to a room and it should accept the invite and join.
+Invite the bot to the management room and it should accept the invite and join.
 
-By default nio-template comes with an `echo` command. Let's test this now.
-After the bot has successfully joined the room, try sending the following
-in a message:
+API commands:
+
+* Send a text message to a specific recipient:
+```
+curl -k -X POST -H "Content-Type: text/plain" -H 'Send-To: @recipient:example.com' -H "Api-Key-Here: Supersecretkey123" --data "Test message" https://127.0.0.1
+```
+
+* Send a file to a specific recipient:
+```
+curl -k -X POST -H "Content-Type: image/png" -H 'Send-To: @recipient:example.com' "Api-Key-Here: Supersecretkey123" -H "File-Name: yourFile.png" --data-binary @./yourFile.png https://127.0.0.1
+```
+
+* Send a text message to the management channel - omit the `Send-To` header.
+
+## Changing bot user Message throttling settings
+In order to allow the bot to write messages quickly without the synapse server throttling the messages,
+we must overwrite the user message throttling settings.
+We will be using the synapse Admin API to make a POST request to the server - 
+[Documentation of synapse admin api](https://matrix-org.github.io/synapse/latest/usage/administration/admin_api/).
+
+### Fetching the admin api key 
+* Create a matrix user with admin privileges
+* Log in with the user
+* Go to 'All settings' -> 'Help & About' -> 'Advanced' -> 'Access Token' (at the bottom)
+* Copy the Access Token.
+This token is only valid for the duration you are logged in with the user!
+ 
+### Make the API call 
+The call for overwriting the @test:synapse.local user throttle settings is:
 
 ```
-!c echo I am a bot!
+curl --header "Authorization: Bearer ENTERADMINAPIKEYHERE" -H "Content-Type: application/json" --request POST -k http://localhost:8008/_synapse/admin/v1/users/@test:synapse.local/override_ratelimit
 ```
 
-The message should be repeated back to you by the bot.
+It should return result of `{"messages_per_second":0, "burst_count":0}`
 
 ## Going forwards
 
@@ -185,5 +202,4 @@ re-run the bot and see how it behaves. Have fun!
 ## Troubleshooting
 
 If you had any difficulties with this setup process, please [file an
-issue](https://github.com/anoadragon453/nio-template/issues]) or come talk
-about it in [the matrix room](https://matrix.to/#/#nio-template).
+issue](https://github.com/murlock1000/MatrixNotificationBot/issues).

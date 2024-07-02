@@ -1,0 +1,29 @@
+[Install]
+WantedBy=multi-user.target
+
+[Unit]
+Description=gunicorn support bot dashboard service
+Requires=docker.service
+After=docker.service
+
+[Service]
+User=bot_messenger
+Group=bot_messenger
+
+Restart=always
+RestartSec=10
+
+WorkingDirectory=/path/to/bot_messenger/data/
+
+# Remove old container
+ExecStartPre=/usr/bin/docker-compose down bot-messenger
+# Compose up
+ExecStart=/usr/bin/docker-compose up bot-messenger
+
+# Compose down
+ExecStop=/usr/bin/docker-compose down bot-messenger
+
+#RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

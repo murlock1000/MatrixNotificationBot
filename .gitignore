@@ -32,3 +32,4 @@ SupportBot.png
 .vscode/launch.json
 test.py
 load.sh
+data/*

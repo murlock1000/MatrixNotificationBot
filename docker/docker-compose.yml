@@ -2,17 +2,17 @@ version: '3.1' # specify docker-compose version
 
 volumes:
   # Set up with `docker volume create ...`. See docker/README.md for more info.
-  data_volume:
+  messenger_bot_data_volume:
     external: true
   pg_data_volume:
 
 services:
   # Runs from the latest release
   bot-messenger:
-    image: somebody/bot-messenger
+    image: murlock1000/bot_messenger
     restart: always
     volumes:
-      - data_volume:/data
+      - messenger_bot_data_volume:/data
     # Used for allowing connections to homeservers hosted on the host machine
     # (while docker host mode is still broken on Linux).
     #
@@ -29,7 +29,7 @@ services:
       # args:
       #  PYTHON_VERSION: 3.8
     volumes:
-      - data_volume:/data
+      - messenger_bot_data_volume:/data
     # Used for allowing connections to homeservers hosted on the host machine
     # (while docker host networking mode is still broken on Linux).
     #
@@ -46,7 +46,7 @@ services:
       # args:
       #  PYTHON_VERSION: 3.8
     volumes:
-      - data_volume:/data
+      - messenger_bot_data_volume:/data
     # Used for allowing connections to homeservers hosted on the host machine
     # (while docker host networking mode is still broken on Linux).
     #

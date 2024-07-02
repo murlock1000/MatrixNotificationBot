@@ -25,14 +25,13 @@ trap on_exit EXIT
 if [ -z "$HOST_IP_ADDRESS" ]; then
   # It's not defined. Try to guess what it is
 
-  # First we try the `ip` command, available primarily on Linux
+  # We try the `ip` command, available primarily on Linux
   export HOST_IP_ADDRESS="`ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$/\1/p'`"
-
   if [ $? -ne 0 ]; then
     # That didn't work. `ip` isn't available on old Linux systems, or MacOS.
     # Try `ifconfig` instead
     export HOST_IP_ADDRESS="`ifconfig $(netstat -rn | grep -E "^default|^0.0.0.0" | head -1 | awk '{print $NF}') | grep 'inet ' | awk '{print $2}' | grep -Eo '([0-9]*\.){3}[0-9]*'`"
- 
+
     if [ $? -ne 0 ]; then
       # That didn't work either, give up
       echo "
@@ -44,6 +43,7 @@ set HOST_IP_ADDRESS=127.0.0.1"
     fi
   fi
 fi
+
 
 # Build and run latest code
 docker-compose up --build local-checkout-dev

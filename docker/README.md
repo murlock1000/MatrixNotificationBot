@@ -1,6 +1,6 @@
 # Docker
 
-The docker image will run bot-messenger with a SQLite database and
+The docker image from [Docker Hub](https://hub.docker.com/r/murlock1000/messenger_bot) will run messenger_bot with a SQLite database and
 end-to-end encryption dependencies included. For larger deployments, a
 connection to a Postgres database backend is recommended.
 
@@ -8,8 +8,8 @@ connection to a Postgres database backend is recommended.
 
 ### The `/data` volume
 
-The docker container expects the `config.yaml` file to exist at
-`/data/config.yaml`. To easily configure this, it is recommended to create a
+The docker container expects the `config.yaml` file and credentials folder to exist at
+`/data/config.yaml`, `/data/credentials/`. To easily configure this, it is recommended to create a
 directory on your filesystem, and mount it as `/data` inside the container:
 
 ```
@@ -30,7 +30,7 @@ differences:
   `/data/store`. There is no need to create this directory yourself, it will be
   created on startup if it does not exist.
 
-* Choose whether you want to use SQLite or Postgres as your database backend.
+* Choose whether you want to use SQLite or Postgres as your database backend (only Postgres supported for now).
   Postgres has increased performance over SQLite, and is recommended for
   deployments with many users.
 
@@ -44,7 +44,7 @@ differences:
   If using postgres, point to your postgres instance instead:
 
   ```
-  database: "postgres://username:password@postgres/bot-messenger?sslmode=disable"
+  database: "postgres://username:password@postgres/messenger_bot?sslmode=disable"
   ```
 
   **Note:** a postgres container is defined in `docker-compose.yaml` for your convenience.
@@ -67,7 +67,7 @@ First, create a volume for the data directory created in the above section:
 docker volume create \
   --opt type=none \
   --opt o=bind \
-  --opt device="/path/to/data/dir" data_volume
+  --opt device="/path/to/data/dir" messenger_bot_data_volume
 ```
 
 Optional: If you want to use the postgres container defined in
@@ -80,20 +80,20 @@ docker-compose up -d postgres
 Start the bot with:
 
 ```
-docker-compose up bot-messenger
+docker-compose up messenger_bot
 ```
 
 This will run the bot and log the output to the terminal. You can instead run
 the container detached with the `-d` flag:
 
 ```
-docker-compose up -d bot-messenger
+docker-compose up -d messenger_bot
 ```
 
 (Logs can later be accessed with the `docker logs` command).
 
 This will use the `latest` tag from
-[Docker Hub](https://hub.docker.com/somebody/bot-messenger).
+[Docker Hub](https://hub.docker.com/r/murlock1000/messenger_bot).
 
 If you would rather run from the checked out code, you can use:
 
@@ -116,7 +116,7 @@ remove the option altogether to allow all addresses.
 To update the container, navigate to the bot's `docker` directory and run:
 
 ```
-docker-compose pull bot-messenger
+docker-compose pull messenger_bot
 ```
 
 Then restart the bot.
@@ -124,26 +124,26 @@ Then restart the bot.
 ## Systemd
 
 A systemd service file is provided for your convenience at
-[bot-messenger.service](bot-messenger.service). The service uses
+[messenger_bot.service](messenger_bot.service). The service uses
 `docker-compose` to start and stop the bot.
 
-Copy the file to `/etc/systemd/system/bot-messenger.service` and edit to
+Copy the file to `/etc/systemd/system/messenger_bot.service` and edit to
 match your setup. You can then start the bot with:
 
 ```
-systemctl start bot-messenger
+systemctl start messenger_bot
 ```
 
 and stop it with:
 
 ```
-systemctl stop bot-messenger
+systemctl stop messenger_bot
 ```
 
 To run the bot on system startup:
 
 ```
-systemctl enable bot-messenger
+systemctl enable messenger_bot
 ```
 
 ## Building the image
@@ -152,5 +152,5 @@ To build a production image from source, use the following `docker build` comman
 from the repo's root:
 
 ```
-docker build -t somebody/bot-messenger:latest -f docker/Dockerfile .
+docker build -t murlock1000/messenger_bot:latest -f docker/Dockerfile --no-cache .
 ```

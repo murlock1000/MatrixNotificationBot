@@ -110,6 +110,7 @@ class Config:
 
         self.notifications_room = self._get_cfg(["notifications_room"], required=True)
         self.port = self._get_cfg(["port"], default="8080")
+        self.certFilePath = self._get_cfg(["cert_file_path"], default="./data/server.pem")
         self.api_key = self._get_cfg(["API_key"], required=True)
 
 

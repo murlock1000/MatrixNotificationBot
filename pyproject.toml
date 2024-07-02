@@ -1,0 +1,49 @@
+[tool.poetry]
+name = "messenger-bot"
+version = "1.0.0"
+description = "Uses POST to get a notification with an API key and forward it to a Matrix channel."
+authors = ["murlock1000 <pauliusjankauskas10@gmail.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.8"
+matrix-nio = {version = "^0.24.0", extras = ["e2e"]}
+PyYAML = "<7"
+markdown = "^3.1.1"
+python-magic = "^0.4.27"
+pillow = "^10.4.0"
+psycopg2 = "<3"
+commonmark = "<1"
+
+[tool.poetry.group.dev.dependencies]
+isort = "5.0.4"
+flake8 = "3.8.3"
+flake8-comprehensions = "3.2.3"
+black = "19.10b0"
+
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.isort]
+line_length = 88
+sections=["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "TESTS", "LOCALFOLDER"]
+default_section="THIRDPARTY"
+known_first_party=["bot_messenger"]
+known_tests=["tests"]
+multi_line_output=3
+include_trailing_comma=true
+combine_as_imports=true
+
+[tool.flake]
+# see https://pycodestyle.readthedocs.io/en/latest/intro.html#error-codes
+# for error codes. The ones we ignore are:
+#   W503: line break before binary operator
+#   W504: line break after binary operator
+#   E203: whitespace before ':' (which is contrary to pep8?)
+#   E731: do not assign a lambda expression, use a def
+#   E501: Line too long (black enforces this for us)
+ignore=["W503", "W504", "E203", "E731", "E501"]
