@@ -109,7 +109,7 @@ class HttpServerInstance():
         global EVENT_LOOP
         EVENT_LOOP = loop
         self.port = port
-        self.cerFilePath = certFilePath
+        self.certFilePath = certFilePath
 
     def runHttpServer(self, httpd):
         try:

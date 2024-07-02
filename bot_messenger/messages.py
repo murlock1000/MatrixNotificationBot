@@ -4,6 +4,10 @@ import re
 
 import magic
 
+from nio import (
+    AsyncClient,
+)
+
 class MessageType(Enum):
     BASE = 0
     TEXT = 1

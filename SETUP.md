@@ -98,7 +98,7 @@ We will be using [Poetry](https://python-poetry.org/) to manage our project depe
 Copy the sample configuration file to a new `config.yaml` file.
 
 ```
-cp sample.config.yaml config.yaml
+cp sample.config.yaml ./data/config.yaml
 ```
 
 Edit the config file. The `matrix` section must be modified at least.
@@ -108,7 +108,7 @@ Edit the config file. The `matrix` section must be modified at least.
 Create locally signed certificate:
 openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout ./data/server.key -out ./data/server.crt
 
-cat server.crt server.key > ./data/server.pem
+cat ./data/server.crt ./data/server.key > ./data/server.pem
 
 #### (Optional) Set up a Postgres database
 

@@ -96,7 +96,8 @@ COPY --from=builder /usr/local/lib/libolm* /usr/local/lib/
 # Install any native runtime dependencies
 RUN apk add --no-cache \
     libstdc++ \
-    libpq
+    libpq \
+    libmagic
 
 # Now copy the source code
 COPY *.py *.md /app/

@@ -51,7 +51,8 @@ RUN apk add --no-cache \
     musl-dev \
     libpq \
     postgresql-dev \
-    libstdc++
+    libstdc++\
+    libmagic
 
 # Install python runtime modules. We do this before copying the source code
 # such that these dependencies can be cached

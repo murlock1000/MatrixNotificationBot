@@ -9,7 +9,7 @@ volumes:
 services:
   # Runs from the latest release
   bot-messenger:
-    image: murlock1000/bot_messenger
+    image: murlock1000/messenger_bot:latest
     restart: always
     volumes:
       - messenger_bot_data_volume:/data
@@ -19,6 +19,8 @@ services:
     # Defaults to 127.0.0.1 and is set in docker/.env
     extra_hosts:
       - "localhost:${HOST_IP_ADDRESS}"
+    ports:
+      - "8080:8080"
 
   # Builds and runs an optimized container from local code
   local-checkout:
@@ -36,6 +38,8 @@ services:
     # Defaults to 127.0.0.1 and is set in docker/.env
     extra_hosts:
       - "localhost:${HOST_IP_ADDRESS}"
+    ports:
+      - "8080:8080"
 
   # Builds and runs a development container from local code
   local-checkout-dev:
@@ -53,6 +57,8 @@ services:
     # Defaults to 127.0.0.1 and is set in docker/.env
     extra_hosts:
       - "localhost:${HOST_IP_ADDRESS}"
+    ports:
+      - "8080:8080"
 
   # Starts up a postgres database
   postgres:

@@ -11,6 +11,10 @@ send_to_notifications_room_by_default: true
 
 # HTTP server port (default 8080)
 port : 8080
+
+# HTTP endpoint certificate
+cert_file_path : ./data/server.pem
+
 # API key for posting messages
 API_key : "Supersecretkey123"
 
