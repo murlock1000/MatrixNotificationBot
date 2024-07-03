@@ -105,11 +105,12 @@ class httpRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
 class HttpServerInstance():
-    def __init__(self, loop, port=8080, certFilePath='./data/server.pem'):
+    def __init__(self, loop, port=8080, certFilePath='./data/server.pem', enableSSL = False):
         global EVENT_LOOP
         EVENT_LOOP = loop
         self.port = port
         self.certFilePath = certFilePath
+        self.enableSSL = enableSSL
 
     def runHttpServer(self, httpd):
         try:
@@ -123,7 +124,8 @@ class HttpServerInstance():
         # Create a http server instance and run it in a separate thread.
         self.httpd = HTTPServer(server_address, httpRequestHandler)
         #setting up ssl sertification
-        self.httpd.socket = ssl.wrap_socket (self.httpd.socket, certfile=self.certFilePath, server_side=True)
+        if self.enableSSL:
+            self.httpd.socket = ssl.wrap_socket (self.httpd.socket, certfile=self.certFilePath, server_side=True)
         logger.info('Starting httpd...')
         try:
             self.thread = Thread(target= self.runHttpServer, args=(self.httpd,))

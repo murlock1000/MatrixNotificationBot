@@ -14,6 +14,7 @@ port : 8080
 
 # HTTP endpoint certificate
 cert_file_path : ./data/server.pem
+enable_ssl: False
 
 # API key for posting messages
 API_key : "Supersecretkey123"
