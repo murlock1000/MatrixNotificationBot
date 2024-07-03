@@ -66,7 +66,7 @@ async def main():
     # Set up event callbacks
     callbacks = Callbacks(client, store, config)
     # Start the HTTP server
-    httpServerInstance = HttpServerInstance(asyncio.get_event_loop(), config.port, config.certFilePath)
+    httpServerInstance = HttpServerInstance(asyncio.get_event_loop(), config.port, config.certFilePath, config.enableSSL)
     httpServerInstance.set_callback(callbacks.notification)
     httpServerInstance.set_api_key(config.api_key)
     if config.send_to_notifications_room_by_default:
@@ -75,8 +75,8 @@ async def main():
 
     #client.add_event_callback(callbacks.message, (RoomMessageText,))
     client.add_event_callback(callbacks.member, (RoomMemberEvent,))
-    client.add_event_callback(callbacks.invite_event_filtered_callback, (InviteMemberEvent,))
     client.add_event_callback(callbacks.room_encryption, (RoomEncryptionEvent,))
+    client.add_event_callback(callbacks.invite, (InviteMemberEvent,))
 
     # Keep trying to reconnect on failure (with some time in-between)
     while True:

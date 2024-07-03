@@ -13,7 +13,7 @@ from nio import (
     ErrorResponse,
 )
 
-from bot_messenger.chat_functions import create_private_room, find_private_msg, is_ready_to_send_message, send_message_to_room
+from bot_messenger.chat_functions import create_private_room, find_private_msg, is_ready_to_send_message, send_message_to_room, with_ratelimit
 from bot_messenger.config import Config
 from bot_messenger.messages import BaseMessage
 from bot_messenger.storage import Storage
@@ -163,43 +163,16 @@ class Callbacks:
                         logger.error(f"Error performing queued task after joining room: {e}")
                 # Clear tasks
                 self.rooms_pending.pop(room.room_id)
-            
-    async def invite(self, room: MatrixRoom, event: InviteMemberEvent) -> None:
-        """Callback for when an invite is received. Join the room specified in the invite.
-
-        Args:
-            room: The room that we are invited to.
-
-            event: The invite event.
-        """
+    
+    async def invite(self, room, event):
+        """Callback for when an invitation is received. Join the room specified in the invite"""
+        if self.should_process(event.source.get("event_id")) is False:
+            return
         logger.debug(f"Got invite to {room.room_id} from {event.sender}.")
 
-        # Attempt to join 3 times before giving up
-        for attempt in range(3):
-            result = await self.client.join(room.room_id)
-            if type(result) == JoinError:
-                logger.error(
-                    f"Error joining room {room.room_id} (attempt %d): %s",
-                    attempt,
-                    result.message,
-                )
-            else:
-                break
-        else:
+        result = await with_ratelimit(self.client.join)(room.room_id)
+        if type(result) == JoinError:
             logger.error("Unable to join room: %s", room.room_id)
+            return
 
-        # Successfully joined room
         logger.info(f"Joined {room.room_id}")
-
-    async def invite_event_filtered_callback(
-        self, room: MatrixRoom, event: InviteMemberEvent
-    ) -> None:
-        """
-        Since the InviteMemberEvent is fired for every m.room.member state received
-        in a sync response's `rooms.invite` section, we will receive some that are
-        not actually our own invite event (such as the inviter's membership).
-        This makes sure we only call `callbacks.invite` with our own invite events.
-        """
-        if event.state_key == self.client.user_id:
-            # This is our own membership (invite) event
-            await self.invite(room, event)
